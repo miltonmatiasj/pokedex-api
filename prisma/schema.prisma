@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Pokemon {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  tipo        String   @db.VarChar(50)
+  habilidades Json
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, userId])
+  @@map("pokemons")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(100)
+  email     String    @unique @db.VarChar(255)
+  password  String    @db.VarChar(255)
+  pokemons  Pokemon[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
