@@ -12,9 +12,6 @@ class PokemonController {
       }
 
       const pokemons = await prisma.pokemon.findMany({
-        where: {
-          userId,
-        },
         orderBy: {
           name: "asc",
         },
@@ -47,8 +44,7 @@ class PokemonController {
 
       const pokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id),
-          userId,
+          id: parseInt(id)
         },
         select: {
           id: true,
@@ -82,7 +78,7 @@ class PokemonController {
         return;
       }
 
-      const where: any = { userId };
+      const where: any = {};
 
       if (name && typeof name === "string") {
         where.name = { contains: name };
@@ -224,14 +220,13 @@ class PokemonController {
 
       const existingPokemon = await prisma.pokemon.findFirst({
         where: {
-          name,
-          userId,
+          name
         },
       });
 
       if (existingPokemon) {
-        res.status(400).json({
-          error: "Você já possui um pokémon com este nome",
+        res.status(409).json({
+          error: "Pokemon já cadastrado no sistema.",
         });
         return;
       }
@@ -273,8 +268,7 @@ class PokemonController {
 
       const existingPokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id),
-          userId,
+          id: parseInt(id)
         },
       });
 
@@ -324,13 +318,12 @@ class PokemonController {
         const pokemonWithName = await prisma.pokemon.findFirst({
           where: {
             name,
-            userId,
             id: { not: parseInt(id) },
           },
         });
 
         if (pokemonWithName) {
-          res.status(400).json({
+          res.status(409).json({
             error: "Você já possui outro pokémon com este nome",
           });
           return;
@@ -375,8 +368,7 @@ class PokemonController {
 
       const pokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id),
-          userId,
+          id: parseInt(id)
         },
       });
 
