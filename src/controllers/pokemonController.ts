@@ -69,50 +69,50 @@ class PokemonController {
   }
 
   async search(req: Request, res: Response): Promise<void> {
-    try {
-      const { name, tipo, habilidade } = req.query;
-      const userId = req.user?.id;
+  try {
+    const { name, tipo, habilidade } = req.query;
 
-      if (!userId) {
-        res.status(401).json({ error: "Usuário não autenticado" });
-        return;
-      }
+    const conditions: string[] = [];
+    const params: any[] = [];
 
-      const where: any = {};
-
-      if (name && typeof name === "string") {
-        where.name = { contains: name };
-      }
-
-      if (tipo && typeof tipo === "string") {
-        where.tipo = { contains: tipo };
-      }
-
-      if (habilidade && typeof habilidade === "string") {
-        where.habilidades = { array_contains: habilidade };
-      }
-
-      const pokemons = await prisma.pokemon.findMany({
-        where,
-        orderBy: {
-          name: "asc",
-        },
-        select: {
-          id: true,
-          name: true,
-          tipo: true,
-          habilidades: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      res.json(pokemons);
-    } catch (error) {
-      console.error("Erro ao buscar pokémons:", error);
-      res.status(500).json({ error: "Erro ao buscar pokémons" });
+    // name LIKE
+    if (name && typeof name === "string") {
+      conditions.push(`name LIKE ?`);
+      params.push(`%${name}%`);
     }
+
+    // tipo LIKE
+    if (tipo && typeof tipo === "string") {
+      conditions.push(`tipo LIKE ?`);
+      params.push(`%${tipo}%`);
+    }
+
+    // habilidade dentro do JSON array -> JSON_SEARCH suporta wildcard '%'
+    if (habilidade && typeof habilidade === "string") {
+      // se 'habilidades' for JSON no MySQL:
+      conditions.push(`JSON_SEARCH(habilidades, 'one', ?) IS NOT NULL`);
+      params.push(`%${habilidade}%`);
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const query = `
+      SELECT id, name, tipo, habilidades, createdAt, updatedAt
+      FROM pokemons
+      ${whereClause}
+      ORDER BY name ASC
+    `;
+
+    const pokemons = await prisma.$queryRawUnsafe(query, ...params);
+
+    res.json(pokemons);
+  } catch (error) {
+    console.error("Erro ao buscar pokémons:", error);
+    res.status(500).json({ error: "Erro ao buscar pokémons" });
   }
+}
+
+
 
   async dashboard(req: Request, res: Response): Promise<void> {
     try {
