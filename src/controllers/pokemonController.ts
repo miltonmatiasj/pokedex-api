@@ -90,7 +90,7 @@ class PokemonController {
     // habilidade dentro do JSON array -> JSON_SEARCH suporta wildcard '%'
     if (habilidade && typeof habilidade === "string") {
       // se 'habilidades' for JSON no MySQL:
-      conditions.push(`JSON_SEARCH(habilidades, 'one', ?) IS NOT NULL`);
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(habilidades, '$')) COLLATE utf8mb4_general_ci LIKE ?`);
       params.push(`%${habilidade}%`);
     }
 
