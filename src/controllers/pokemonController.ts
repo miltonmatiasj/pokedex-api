@@ -12,6 +12,9 @@ class PokemonController {
       }
 
       const pokemons = await prisma.pokemon.findMany({
+        where: {
+          userId,
+        },
         orderBy: {
           name: "asc",
         },
@@ -44,7 +47,8 @@ class PokemonController {
 
       const pokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id)
+          id: parseInt(id),
+          userId,
         },
         select: {
           id: true,
@@ -71,10 +75,20 @@ class PokemonController {
   async search(req: Request, res: Response): Promise<void> {
   try {
     const { name, tipo, habilidade } = req.query;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ error: "Usuário não autenticado" });
+      return;
+    }
 
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
+
+    conditions.push(`"userId" = $${paramIndex}`);
+    params.push(userId);
+    paramIndex++;
 
     if (name && typeof name === "string") {
       conditions.push(`name ILIKE $${paramIndex}`);
@@ -94,7 +108,7 @@ class PokemonController {
       paramIndex++;
     }
 
-    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
     const query = `
       SELECT id, name, tipo, habilidades, "createdAt", "updatedAt"
@@ -220,7 +234,8 @@ class PokemonController {
 
       const existingPokemon = await prisma.pokemon.findFirst({
         where: {
-          name
+          name,
+          userId,
         },
       });
 
@@ -268,7 +283,8 @@ class PokemonController {
 
       const existingPokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id)
+          id: parseInt(id),
+          userId,
         },
       });
 
@@ -318,6 +334,7 @@ class PokemonController {
         const pokemonWithName = await prisma.pokemon.findFirst({
           where: {
             name,
+            userId,
             id: { not: parseInt(id) },
           },
         });
@@ -368,7 +385,8 @@ class PokemonController {
 
       const pokemon = await prisma.pokemon.findFirst({
         where: {
-          id: parseInt(id)
+          id: parseInt(id),
+          userId,
         },
       });
 
