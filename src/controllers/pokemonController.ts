@@ -124,11 +124,9 @@ class PokemonController {
       }
 
       const totalCount = await prisma.pokemon.count({
-        where: { userId },
       });
 
       const pokemons = await prisma.pokemon.findMany({
-        where: { userId },
         select: {
           tipo: true,
           habilidades: true,
