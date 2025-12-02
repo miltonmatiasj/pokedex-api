@@ -22,6 +22,11 @@ class PokemonController {
           habilidades: true,
           createdAt: true,
           updatedAt: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
         },
       });
 
@@ -53,6 +58,11 @@ class PokemonController {
           habilidades: true,
           createdAt: true,
           updatedAt: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
         },
       });
 
@@ -83,19 +93,19 @@ class PokemonController {
       let paramIndex = 1;
 
       if (name && typeof name === "string") {
-        conditions.push(`name ILIKE $${paramIndex}`);
+        conditions.push(`p.name ILIKE $${paramIndex}`);
         params.push(`%${name}%`);
         paramIndex++;
       }
 
       if (tipo && typeof tipo === "string") {
-        conditions.push(`tipo ILIKE $${paramIndex}`);
+        conditions.push(`p.tipo ILIKE $${paramIndex}`);
         params.push(`%${tipo}%`);
         paramIndex++;
       }
 
       if (habilidade && typeof habilidade === "string") {
-        conditions.push(`habilidades::text ILIKE $${paramIndex}`);
+        conditions.push(`p.habilidades::text ILIKE $${paramIndex}`);
         params.push(`%${habilidade}%`);
         paramIndex++;
       }
@@ -103,10 +113,11 @@ class PokemonController {
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
       const query = `
-      SELECT id, name, tipo, habilidades, "createdAt", "updatedAt"
-      FROM pokemons
+      SELECT p.id, p.name, p.tipo, p.habilidades, p."createdAt", p."updatedAt", u.name as "userName"
+      FROM pokemons p
+      INNER JOIN users u ON p."userId" = u.id
       ${whereClause}
-      ORDER BY name ASC
+      ORDER BY p.name ASC
     `;
 
       const pokemons = await prisma.$queryRawUnsafe(query, ...params);
@@ -355,6 +366,11 @@ class PokemonController {
           habilidades: true,
           createdAt: true,
           updatedAt: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
         },
       });
 
