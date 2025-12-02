@@ -12,9 +12,6 @@ class PokemonController {
       }
 
       const pokemons = await prisma.pokemon.findMany({
-        where: {
-          userId,
-        },
         orderBy: {
           name: "asc",
         },
@@ -45,10 +42,9 @@ class PokemonController {
         return;
       }
 
-      const pokemon = await prisma.pokemon.findFirst({
+      const pokemon = await prisma.pokemon.findUnique({
         where: {
           id: parseInt(id),
-          userId,
         },
         select: {
           id: true,
@@ -73,60 +69,54 @@ class PokemonController {
   }
 
   async search(req: Request, res: Response): Promise<void> {
-  try {
-    const { name, tipo, habilidade } = req.query;
-    const userId = req.user?.id;
+    try {
+      const { name, tipo, habilidade } = req.query;
+      const userId = req.user?.id;
 
-    if (!userId) {
-      res.status(401).json({ error: "Usuário não autenticado" });
-      return;
-    }
+      if (!userId) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
 
-    const conditions: string[] = [];
-    const params: any[] = [];
-    let paramIndex = 1;
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
 
-    conditions.push(`"userId" = $${paramIndex}`);
-    params.push(userId);
-    paramIndex++;
+      if (name && typeof name === "string") {
+        conditions.push(`name ILIKE $${paramIndex}`);
+        params.push(`%${name}%`);
+        paramIndex++;
+      }
 
-    if (name && typeof name === "string") {
-      conditions.push(`name ILIKE $${paramIndex}`);
-      params.push(`%${name}%`);
-      paramIndex++;
-    }
+      if (tipo && typeof tipo === "string") {
+        conditions.push(`tipo ILIKE $${paramIndex}`);
+        params.push(`%${tipo}%`);
+        paramIndex++;
+      }
 
-    if (tipo && typeof tipo === "string") {
-      conditions.push(`tipo ILIKE $${paramIndex}`);
-      params.push(`%${tipo}%`);
-      paramIndex++;
-    }
+      if (habilidade && typeof habilidade === "string") {
+        conditions.push(`habilidades::text ILIKE $${paramIndex}`);
+        params.push(`%${habilidade}%`);
+        paramIndex++;
+      }
 
-    if (habilidade && typeof habilidade === "string") {
-      conditions.push(`habilidades::text ILIKE $${paramIndex}`);
-      params.push(`%${habilidade}%`);
-      paramIndex++;
-    }
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const whereClause = `WHERE ${conditions.join(" AND ")}`;
-
-    const query = `
+      const query = `
       SELECT id, name, tipo, habilidades, "createdAt", "updatedAt"
       FROM pokemons
       ${whereClause}
       ORDER BY name ASC
     `;
 
-    const pokemons = await prisma.$queryRawUnsafe(query, ...params);
+      const pokemons = await prisma.$queryRawUnsafe(query, ...params);
 
-    res.json(pokemons);
-  } catch (error) {
-    console.error("Erro ao buscar pokémons:", error);
-    res.status(500).json({ error: "Erro ao buscar pokémons" });
+      res.json(pokemons);
+    } catch (error) {
+      console.error("Erro ao buscar pokémons:", error);
+      res.status(500).json({ error: "Erro ao buscar pokémons" });
+    }
   }
-}
-
-
 
   async dashboard(req: Request, res: Response): Promise<void> {
     try {
@@ -137,8 +127,7 @@ class PokemonController {
         return;
       }
 
-      const totalCount = await prisma.pokemon.count({
-      });
+      const totalCount = await prisma.pokemon.count({});
 
       const pokemons = await prisma.pokemon.findMany({
         select: {
@@ -271,7 +260,7 @@ class PokemonController {
   async update(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { name, tipo, habilidades } = req.body;
+      const { name, tipo, habilidades, userId: bodyUserId } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -279,17 +268,22 @@ class PokemonController {
         return;
       }
 
-      const existingPokemon = await prisma.pokemon.findFirst({
+      if (bodyUserId !== undefined) {
+        res.status(400).json({
+          error: "Não é permitido alterar o usuário criador do pokémon",
+        });
+        return;
+      }
+
+      const existingPokemon = await prisma.pokemon.findUnique({
         where: {
           id: parseInt(id),
-          userId,
         },
       });
 
       if (!existingPokemon) {
         res.status(404).json({
-          error:
-            "Pokémon não encontrado ou você não tem permissão para editá-lo",
+          error: "Pokémon não encontrado",
         });
         return;
       }
@@ -332,14 +326,14 @@ class PokemonController {
         const pokemonWithName = await prisma.pokemon.findFirst({
           where: {
             name,
-            userId,
+            userId: existingPokemon.userId,
             id: { not: parseInt(id) },
           },
         });
 
         if (pokemonWithName) {
           res.status(409).json({
-            error: "Você já possui outro pokémon com este nome",
+            error: "Já existe outro pokémon com este nome para o mesmo criador",
           });
           return;
         }
@@ -381,17 +375,15 @@ class PokemonController {
         return;
       }
 
-      const pokemon = await prisma.pokemon.findFirst({
+      const pokemon = await prisma.pokemon.findUnique({
         where: {
           id: parseInt(id),
-          userId,
         },
       });
 
       if (!pokemon) {
         res.status(404).json({
-          error:
-            "Pokémon não encontrado ou você não tem permissão para deletá-lo",
+          error: "Pokémon não encontrado",
         });
         return;
       }
